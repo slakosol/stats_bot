@@ -328,6 +328,4 @@ class NavBot(webdriver.Chrome):
                 continue
         
         player_stats = pd.DataFrame(defined_player_stat_dict)
-        save_time = time.strftime("%m-%d_%H%M")
-        player_stats.to_csv(f"player_stats - {save_time}.csv")
         return player_stats

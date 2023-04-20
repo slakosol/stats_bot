@@ -5,6 +5,7 @@ First, the script collects input data from the user on desire filters,
 and then calls the relevant methods for pulling the data in __main__.
 """
 from bot.nav_bot import NavBot
+import time
 
 # Console input for filters
 print("Please specify the desired parameters for the search:")
@@ -48,6 +49,9 @@ def run():
         else:
             stat_dict = bot.establish_schema(main_filter)
             stats_df = bot.scan_remaining_pages(stat_dict)
+        
+        save_time = time.strftime("%m-%d_%H%M")
+        stats_df.to_csv(f"{league} - player_stats - {save_time}.csv")
 
 
 
