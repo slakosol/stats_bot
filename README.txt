@@ -21,4 +21,15 @@ Major file components and directories:
 	a pandas dataframe and to a local PostgreSQL server.
 
 
-# TODO: test for only one page of data ()
+# TODO: ***finish documentation for new method*** (then make commit)
+- Write input methods for detailed filters (documentation)
+- Decide on the kind of data im pulling
+- Load data into PostgreSQL
+- Build a new, enhanced table with AGG funcs
+- Load table back into Python
+- Do some data visualization (comp on AGG funcs within PL clubs 
+and some cross league comps)
+
+
+if Serie A and LaLiga establish schema ever works, change the method
+selector in detailed filter too

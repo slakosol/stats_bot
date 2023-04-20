@@ -26,19 +26,41 @@ class NavBot(webdriver.Chrome):
     Methods
     -------
     open_page () :
-        opens connection to the webpage
+        opens a connection to the league's webpage, and selects
+        the season of interest
+        Args:
+            league (str) : the league for which the data is to be retrieved
+                (default is c.PL_PAGE_URL)
+            season (str) : the season for which the data is to be retrieved
+                (default is '21/22')
 
     establish_basic_schema (filter) :
         selects a preset filter type, pulls table headers as dictionary keys
         and row values as a lists for each column header
         Args:
             filter (str) : preset filter type for the table ("Summary", "Attack",
-                "Defence", "Passing", "Goalkeeper") (default is "Summary")
+                "Defence", "Passing", "Goalkeeper") (default is None - constructs
+                table schema based on columns already present)
         Returns:
             dict: dictionary of column headers as keys and row data as values
 
     set_detailed_filters(home_away) :
-        in progress...
+        selects a preset filter, pulls column headers of that data tables
+        as dictionary keys, and stores row values in lists.    
+        Args:
+            home_away (str) : selects the home or away games, or both for the
+                filter ("Overall", "Home", "Away") (default is "Overall")
+            age_filter_type (str) : selects the age filter type ("All",
+                "More than", "Equals", "Less than") (default is "All")
+            player_age (int) : if age_filter_type is not None, then a player
+                age must be specified (default is None)
+            player_position (list of str) : list of desired positions to filter for
+                (['G','D','M','F']) (default is ['G','D','M','F'])
+            filter_cat (str) : broad category for subfilter selection 
+                ("Attack", "Defence", "Passing", "Goalkeeper", "Other")
+            sub_filter_list (list) : selects subfilters for each column of the table,
+                limit 5 (for list of available subfilters see README)
+                (default is ['Goals', 'Shots on target', 'Total shots', 'Rating'])
 
     scan_remaining_pages(defined_player_stat_dict) :
         takes in an established data schema from the establish_basic_schema() method,
@@ -65,22 +87,41 @@ class NavBot(webdriver.Chrome):
     
 
 
-    def open_page(self):
-        """ Opens a connection to the website. """
+    def open_page(self, league="Premier League", season='21/22'):
+        """ 
+        Opens a connection to the league's webpage, and selects
+        the season of interest
 
-        self.get(c.PL_PAGE_URL)
+        Args:
+            league (str) : the league for which the data is to be retrieved
+            (default is c.PL_PAGE_URL)
+            season (str) : the season for which the data is to be retrieved
+            (default is '21/22')
+        """
+        league_dict = {
+            "Premier League": c.PL_PAGE_URL,
+            "LaLiga": c.LALIGA_PAGE_URL,
+            "Bundesliga": c.BUNDESLIGA_PAGE_URL,
+            "Serie A": c.SERIE_A_PAGE_URL,
+            "UCL": c.UCL_PAGE_URL
+        }
+        self.get(league_dict[league])
+        self.find_element(By.XPATH, f'//span[text()="{c.CURRENT_SEASON}"]').click()
+        WebDriverWait(self, 20).until(EC.presence_of_element_located((By.XPATH, f'//li[text()="{season}"]')))
+        self.find_element(By.XPATH, f'//li[text()="{season}"]').click()
         time.sleep(5)
 
 
 
-    def establish_basic_schema(self, filter="Summary"):
+    def establish_schema(self, main_filter=None):
         """
         Selects a preset filter, pulls column headers of that data tables
         as dictionary keys, and stores row values in lists.
         
         Args:
-            filter (str) : preset filter type for the table ("Summary", "Attack",
-                "Defence", "Passing", "Goalkeeper") (default is "Summary")
+            main_filter (str) : preset filter type for the table ("Summary", "Attack",
+                "Defence", "Passing", "Goalkeeper") (default is None - constructs
+                table schema based on columns already present)
 
         Returns:
             dict: dictionary of column headers as keys and row data as values
@@ -88,8 +129,13 @@ class NavBot(webdriver.Chrome):
 
         # Selects relevant filter
         ignored_exceptions=(NoSuchElementException,StaleElementReferenceException,)
-        filter_btn = self.find_element(By.XPATH, f'//div[@class="sc-hLBbgP Hbif"]/button[text()="{filter}"]')
-        filter_btn.click()
+        self.execute_script("window.scrollTo(0,1800)") # Serie A & LaLiga webpages are tempermental
+        # and don't load the filters, even though they are on the page, a work around I found
+        # is to scroll to the location of the filters
+        if main_filter:
+            WebDriverWait(self, 30).until(EC.presence_of_element_located((By.XPATH, f'//div[@class="sc-hLBbgP Hbif"]/button[@data-tabid="{main_filter.lower()}"]')))
+            filter_btn = self.find_element(By.XPATH, f'//div[@class="sc-hLBbgP Hbif"]/button[@data-tabid="{main_filter.lower()}"]')
+            filter_btn.click()
 
         # Pulls column headers into a list
         status = True
@@ -140,13 +186,80 @@ class NavBot(webdriver.Chrome):
         return player_stat_dict
     
 
-    def set_detailed_filters(self, home_away='Home'):
+
+    def set_detailed_filters(self, home_away='Overall', age_filter_type='All',
+                            player_age=None, player_position=['G','D','M','F'],
+                            filter_cat='Attack', sub_filter_list=['Goals', 'Shots on target', 'Total shots', 'Rating']):
         """
-        In progress...
+        Selects a preset filter, pulls column headers of that data tables
+        as dictionary keys, and stores row values in lists.
+        
+        Args:
+            home_away (str) : selects the home or away games, or both for the
+                filter ("Overall", "Home", "Away") (default is "Overall")
+            age_filter_type (str) : selects the age filter type ("All",
+                "More than", "Equals", "Less than") (default is "All")
+            player_age (int) : if age_filter_type is not None, then a player
+                age must be specified (default is None)
+            player_position (list of str) : list of desired positions to filter for
+                (['G','D','M','F']) (default is ['G','D','M','F'])
+            filter_cat (str) : broad category for subfilter selection 
+                ("Attack", "Defence", "Passing", "Goalkeeper", "Other")
+            sub_filter_list (list) : selects subfilters for each column of the table,
+                limit 5 (for list of available subfilters see README)
+                (default is ['Goals', 'Shots on target', 'Total shots', 'Rating'])
+
         """
-        self.find_element(By.XPATH, f'//div[@class="sc-hLBbgP Hbif"]/button[text()="Detailed"]').click()
+
+        self.execute_script("window.scrollTo(0,1800)") # Serie A & LaLiga webpages are tempermental
+        # and don't load the filters, even though they are on the page, a work around I found
+        # is to scroll to the location of the filters
+        WebDriverWait(self, 45).until(EC.presence_of_element_located((By.XPATH, f'//div[@class="sc-hLBbgP Hbif"]/button[text()="Detailed"]')))
+        self.find_element(By.XPATH, f'//button[text()="Detailed"]').click()
+        # Select home_away filter
+        WebDriverWait(self, 30).until(EC.presence_of_element_located((By.XPATH, f'//div[@class="sc-dkrFOg goGQQW"]/button/span[text()="{home_away}"]')))
         home_away_btn = self.find_element(By.XPATH, f'//div[@class="sc-dkrFOg goGQQW"]/button/span[text()="{home_away}"]')
         home_away_btn.click()
+        # Select age filter
+        if age_filter_type != 'All':
+            age_filter_type_el_id = f'//ul[@class="sc-hLBbgP dRtNhU"]/li[text()="{age_filter_type}"]'
+            age_filter_dropdown = self.find_element(By.XPATH, '//div[@class="sc-hLBbgP hQYrtA"]/div[3]/div/div/button').click()
+            WebDriverWait(self, 10).until(EC.presence_of_element_located((By.XPATH, age_filter_type_el_id)))
+            age_dropdown_option = self.find_element(By.XPATH, age_filter_type_el_id).click()
+            age_input_field = self.find_element(By.XPATH, '//input[@class="sc-hLBbgP liJFaS"]')       
+            age_input_field.send_keys(player_age)
+        
+        # Select player positions
+        positions = ['G','D','M','F']
+        for position in positions:
+            if position not in player_position:
+                # WebDriverWait(self, 10).until(EC.visibility_of_element_located((By.XPATH, f'//div[text()="{position}"]')))
+                self.find_element(By.XPATH, f'//label[@for="checkbox-{position}-undefined"]').click()
+
+        # Uncheck all existing filters
+        filter_exists = True
+        while filter_exists:
+            try:
+                self.find_element(By.XPATH, '//button[@class="sc-bcXHqe gJZAMC"]').click()
+            except:
+                filter_exists = False
+        
+        # Selecting filters
+        filter_dict = {
+            "Attack": 1,
+            "Defence": 2,
+            "Passing": 3,
+            "Goalkeeper": 4,
+            "Other": 5
+        }
+        self.find_element(By.XPATH, f'//button[@class="sc-bcXHqe lfmpW"][{filter_dict[filter_cat]}]').click()
+
+        for sub_filter in sub_filter_list:
+            self.find_element(By.XPATH, f'//div[@class="sc-hLBbgP sc-eDvSVe gjJmZQ jaJHeQ"]/label/div/div/span[text()="{sub_filter}"]').click()
+
+        # Apply filters
+        self.find_element(By.XPATH, '//button[@class="sc-bcXHqe ewHKoF"]').click()
+
 
 
     def scan_remaining_pages(self, defined_player_stat_dict):
@@ -171,14 +284,18 @@ class NavBot(webdriver.Chrome):
                 # element selector for a page with <= 2 pages
                 total_page_count = int(self.find_element(By.XPATH, '//div[@class="sc-hLBbgP sc-eDvSVe NWuJg hryjgv"]/div/button[2]/span').get_attribute('innerHTML'))
             except:
-                print("Only one page of data exists.")
+                player_stats = pd.DataFrame(defined_player_stat_dict)
+                save_time = time.strftime("%m-%d_%H%M")
+                player_stats.to_csv(f"player_stats - {save_time}.csv")
+                return player_stats
+
 
         next_page_btn = self.find_element(By.XPATH, '//div[@class="sc-hLBbgP sc-eDvSVe NWuJg hryjgv"]/button[2]')
         next_page_btn.click()
         time.sleep(5)
 
         # Loops over each page of data, appending row values to lists
-        for page in range(total_page_count - 2):
+        for page in range(total_page_count - 1):
             table_elements = self.find_element(By.XPATH, '//tbody').get_attribute('innerHTML')
             table_elements_count = table_elements.count('<tr>')
             num_table_elements = table_elements_count + 1
@@ -204,8 +321,11 @@ class NavBot(webdriver.Chrome):
                         defined_player_stat_dict[col_name].append(col_val)
             
             next_page_btn = self.find_element(By.XPATH, '//div[@class="sc-hLBbgP sc-eDvSVe NWuJg hryjgv"]/button[2]')
-            WebDriverWait(self, 15, ignored_exceptions=ignored_exceptions).until(EC.element_to_be_clickable(next_page_btn))
-            next_page_btn.click()
+            try:
+                WebDriverWait(self, 15, ignored_exceptions=ignored_exceptions).until(EC.element_to_be_clickable(next_page_btn))
+                next_page_btn.click()
+            except:
+                continue
         
         player_stats = pd.DataFrame(defined_player_stat_dict)
         save_time = time.strftime("%m-%d_%H%M")
