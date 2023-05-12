@@ -49,9 +49,10 @@ def run():
         else:
             stat_dict = bot.establish_schema(main_filter)
             stats_df = bot.scan_remaining_pages(stat_dict)
-        
+            
         save_time = time.strftime("%m-%d_%H%M")
         stats_df.to_csv(f"{league} - player_stats - {save_time}.csv")
+        time.sleep(5)
 
 
 

@@ -98,6 +98,7 @@ class NavBot(webdriver.Chrome):
             season (str) : the season for which the data is to be retrieved
             (default is '21/22')
         """
+
         league_dict = {
             "Premier League": c.PL_PAGE_URL,
             "LaLiga": c.LALIGA_PAGE_URL,
@@ -109,7 +110,7 @@ class NavBot(webdriver.Chrome):
         self.find_element(By.XPATH, f'//span[text()="{c.CURRENT_SEASON}"]').click()
         WebDriverWait(self, 20).until(EC.presence_of_element_located((By.XPATH, f'//li[text()="{season}"]')))
         self.find_element(By.XPATH, f'//li[text()="{season}"]').click()
-        time.sleep(5)
+        time.sleep(3)
 
 
 
@@ -188,8 +189,8 @@ class NavBot(webdriver.Chrome):
 
 
     def set_detailed_filters(self, home_away='Overall', age_filter_type='All',
-                            player_age=None, player_position=['G','D','M','F'],
-                            filter_cat='Attack', sub_filter_list=['Goals', 'Shots on target', 'Total shots', 'Rating']):
+                            player_age=None, player_position=['D','M','F'],
+                            filter_cat='Attack', sub_filter_list=['Goals', 'Big chances missed', 'Succ. dribbles', 'Successful dribbles %', 'Offsides']):
         """
         Selects a preset filter, pulls column headers of that data tables
         as dictionary keys, and stores row values in lists.
@@ -275,6 +276,7 @@ class NavBot(webdriver.Chrome):
             pandas.DataFrame: DataFrame of column headers and row values from the
             scanned pages
         """
+
         ignored_exceptions=(NoSuchElementException,StaleElementReferenceException,)
         try:
             # element selector for a page with > 3 pages
@@ -288,7 +290,6 @@ class NavBot(webdriver.Chrome):
                 save_time = time.strftime("%m-%d_%H%M")
                 player_stats.to_csv(f"player_stats - {save_time}.csv")
                 return player_stats
-
 
         next_page_btn = self.find_element(By.XPATH, '//div[@class="sc-hLBbgP sc-eDvSVe NWuJg hryjgv"]/button[2]')
         next_page_btn.click()
